@@ -1,0 +1,158 @@
+#!/bin/bash
+
+# Where should clients look for the server?
+HOSTNAME="conifer0us.dev"
+
+# This script is a simple wrapper around wireguard
+# It allows simple, but not super customizable, VPN creation for a server
+# Client configuration is super easy
+
+OPTSTRING="qmp:"
+QUIET=0
+PORT=51820
+QRCODE=0
+template='command structure: simplevpn <options> [mode] <args>'
+
+IPREGEX='10\.0\.0\.([0-9]{1,3})'
+
+echo() {
+  if [[ $QUIET -eq 1 ]]; then
+    return;
+  fi
+
+  command echo $1;
+}
+
+# Sets up SimpleVPN by installing required packages and running the setup commands
+setup() {
+  echo "Setting up simplevpn (might require superuser premission)";
+
+  if [[ -z "$(dpkg -l | grep 'resolvconf ')" ]]; then
+    echo 'resolvconf not installed; installing with apt: ';
+    sudo apt install resolvconf;
+    printf "\n\n";
+  fi
+
+  if [[ -z "$(dpkg -l | grep 'wireguard ')" ]]; then
+    echo 'wireguard not installed; installing with apt: ';
+    sudo apt install wireguard;
+    printf "\n\n";
+  fi
+
+  if [[ -z "$(dpkg -l | grep 'qrencode ')" ]]; then
+    echo 'qrencode not installed; installing with apt: ';
+    sudo apt install qrencode;
+    printf "\n\n";
+  fi
+
+  if sudo test -f /etc/wireguard/simplevpn.conf; then
+    echo 'simplevpn server already configured on this machine'
+    exit 0;
+  fi
+
+  echo 'Generating simplevpn private key (saving to /etc/wireguard/simplevpn.priv)'
+  sudo touch /etc/wireguard/simplevpn.priv
+  wg genkey | sudo tee /etc/wireguard/simplevpn.priv > /dev/null
+  sudo chmod 600 /etc/wireguard/simplevpn.priv
+
+  echo 'Generating simplevpn public key (saving to /etc/wireguard/simplevpn.pub)'
+  sudo touch /etc/wireguard/simplevpn.pub
+  sudo cat /etc/wireguard/simplevpn.priv | wg pubkey | sudo tee /etc/wireguard/simplevpn.pub > /dev/null
+
+  echo 'Generating simplevpn configuration file (/etc/wireguard/simplevpn.conf)'
+  printf '[Interface]\nAddress=10.0.0.1/24\nListenPort=%s\nPrivateKey=%s\n' "${PORT}" "$(sudo cat /etc/wireguard/simplevpn.priv)" | sudo tee /etc/wireguard/simplevpn.conf > /dev/null
+
+  echo 'PostUp = iptables -A FORWARD -i simplevpn -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; ip6tables -A FORWARD -i simplevpn -j ACCEPT; ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE # Add forwarding when VPN is started' | sudo tee -a /etc/wireguard/simplevpn.conf > /dev/null
+  echo 'PostDown = iptables -D FORWARD -i simplevpn -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; ip6tables -D FORWARD -i simplevpn -j ACCEPT; ip6tables -t nat -D POSTROUTING -o eth0 -j MASQUERADE # Remove forwarding when VPN is shutdown' | sudo tee -a /etc/wireguard/simplevpn.conf > /dev/null
+
+  sudo mkdir -p /etc/wireguard/configs
+
+  printf '\n*simplevpn ready*\n'
+}
+
+newclient() {
+  NAME=$1;
+  FILE="/etc/wireguard/configs/${NAME}.conf"
+  PRIV=$(wg genkey)
+  PUB=$(echo $PRIV | wg pubkey)
+
+  if ! [[ "$(sudo tac /etc/wireguard/simplevpn.conf)" =~ $IPREGEX ]]; then
+    echo 'Corrupted configuration file. Ensure IP addresses in configuration are correct.';
+    exit 1;
+  fi
+
+  if [[ BASH_REMATCH[1] -gt 253 ]]; then
+    echo 'Too many clients! Maximum client IP is 10.0.0.254.';
+    exit 1;
+  fi
+
+  NEXTIP="10.0.0.$((BASH_REMATCH[1] + 1))"
+
+  printf "\n# %s\n[Peer]\nPublicKey=%s\nAllowedIPs=%s/32\n" $NAME $PUB $NEXTIP | sudo tee -a /etc/wireguard/simplevpn.conf > /dev/null
+
+  echo "Client configured and added to server. Client configuration file (also at ${FILE}):"; echo
+
+  sudo touch $FILE
+  printf "[Interface]\nAddress=%s\nDNS=1.1.1.1\nPrivateKey=%s\n\n" $NEXTIP $PRIV | sudo tee $FILE
+  printf "[Peer]\nPublicKey=%s\nEndpoint=%s:51820\nAllowedIPs=0.0.0.0/0\nPersistentKeepalive=10\n" "$(sudo cat /etc/wireguard/simplevpn.pub)" $HOSTNAME | sudo tee -a $FILE
+
+  simplevpn restart
+
+  if [[ $QRCODE -ne 0 ]]; then
+    printf "\nMobile configuration available with the following QR code using the Wireguard app\n";
+    sudo qrencode -t ansiutf8 ${FILE}
+  fi
+}
+
+# Parse options with getopts
+while getopts $OPTSTRING opt; do
+  case $opt in
+   q)
+     QUIET=1;;
+   p)
+     PORT=$OPTARG;;
+   m)
+     QRCODE=1;;
+   :)
+     echo "${template}"
+     exit 1;;
+   ?)
+     echo "${template}"
+     exit 1;;
+  esac
+done
+
+# Shift arguments after parsed by getopts
+shift $((OPTIND-1))
+
+# Call proper mode function based on arguments
+case $1 in
+  "status")
+    systemctl status wg-quick@simplevpn; echo;
+    sudo wg;;
+  "start")
+    sudo systemctl start wg-quick@simplevpn;;
+  "stop")
+    sudo systemctl stop wg-quick@simplevpn;;
+  "restart")
+    sudo systemctl restart wg-quick@simplevpn;;
+  "enable")
+    sudo systemctl enable wg-quick@simplevpn;;
+  "disable")
+    sudo systemctl disable wg-quick@simplevpn;;
+  "addclient")
+    if [[ -n "$2" ]]; then newclient $2; else echo 'Please supply a client name' && exit 1; fi;;
+  "setup")
+    setup;
+    exit 0;;
+  "teardown")
+    simplevpn stop
+    simplevpn disable
+    sudo find /etc/wireguard/ -type f -regex '^/etc/wireguard/simplevpn.*' | xargs -d"\n" sudo rm
+    sudo rm -r /etc/wireguard/configs/
+    exit 0;;
+  *)
+    echo "Invalid mode: ${1}"
+    echo "${template}"
+    exit 1;;
+esac
