@@ -18,7 +18,7 @@ All files produced by the program are put somewhere in /etc/wireguard.
 
 This configures the server to run wireguard. It installs all the required libraries, creates a public/private key pair, and creates a wireguard configuration file.
 
-The simplevpn network is configured for 10.0.0.0/24.
+The simplevpn network is configured for 10.0.0.0/24, but it is not started directly after configuration. simplevpn start must be run
 
 Specifying a -p option changes the port. It is 51820 by default.
 
@@ -26,7 +26,7 @@ Specifying a -p option changes the port. It is 51820 by default.
 
 This adds a client to simplevpn with the given name. Configuration is placed in /etw/wireguard/configs as well as printed for copying to a wireguard app elsewhere. It also runs simplevpn restart so that the new client is loaded.
 
-The -m option, if supplied, is for mobile support. It prints a QR code representation of the client configuration. The QR code does print, but I've gotten mixed results scanning it on the Android app, so the mileage may vary. I'm not going to try too hard to fix this because the configuration is still correct. 
+The -m option, if supplied, is for mobile support. It prints a QR code representation of the client configuration that can be scanned by the wireguard app. 
 
 ### simplevpn teardown
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Where should clients look for the server?
-HOSTNAME="conifer0us.dev"
+# Only option that needs to be changed. Where should clients look for the server?
+HOSTNAME="vpn.conifer0us.dev"
 
 # This script is a simple wrapper around wireguard
 # It allows simple, but not super customizable, VPN creation for a server
@@ -100,7 +100,7 @@ newclient() {
 
   if [[ $QRCODE -ne 0 ]]; then
     printf "\nMobile configuration available with the following QR code using the Wireguard app\n";
-    sudo qrencode -t ansiutf8 ${FILE}
+    sudo cat $FILE | qrencode -t ansiutf8
   fi
 }
 
