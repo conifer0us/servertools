@@ -94,7 +94,7 @@ newclient() {
 
   sudo touch $FILE
   printf "[Interface]\nAddress=%s\nDNS=1.1.1.1\nPrivateKey=%s\n\n" $NEXTIP $PRIV | sudo tee $FILE
-  printf "[Peer]\nPublicKey=%s\nEndpoint=%s:51820\nAllowedIPs=0.0.0.0/0\nPersistentKeepalive=10\n" "$(sudo cat /etc/wireguard/simplevpn.pub)" $HOSTNAME | sudo tee -a $FILE
+  printf "[Peer]\nPublicKey=%s\nEndpoint=%s:51820\nAllowedIPs=10.0.0.0/24\nPersistentKeepalive=10\n" "$(sudo cat /etc/wireguard/simplevpn.pub)" $HOSTNAME | sudo tee -a $FILE
 
   simplevpn restart
 
