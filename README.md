@@ -14,10 +14,14 @@ This section is a short description of the externally facing services running on
 
 Port 22 is open for SSH traffic. The ssh server is fairly standard: only keys are allowed as authentication methods, and each user on the system can have a set of authorized keys
 
-Ports 80 and 443 are open for web traffic through NGINX (routed specifically to an emby server hosting media for only pre-registered users).
-The media server is lightweight, currently running emby and wireguard to connect out to this server.
+Ports 80 and 443 are open for web traffic through NGINX (routed to other servers on Tialsinn Network).
 
 Port 51820 is open for wireguard traffic. Tialsinn is primarily a VPN, managed by the simplevpn script (documentation in the server scripts section).
+
+## Other Servers in the Tialsinn Network
+
+### media server
+This server is hosting personal media for pre-invite users. It is hosted from a server I own locally, and it is set up to only use emby and wireguard to connect out to the Tialsinn network and the rest of the world through nginx.
 
 ## Server Scripts
 
