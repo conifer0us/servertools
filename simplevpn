@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Only option that needs to be changed. Where should clients look for the server?
-HOSTNAME="vpn.conifer0us.dev"
+HOSTNAME=""
 
 # This script is a simple wrapper around wireguard
 # It allows simple, but not super customizable, VPN creation for a server
@@ -13,7 +13,7 @@ PORT=51820
 QRCODE=0
 template='command structure: simplevpn <options> [mode] <args>'
 
-IPREGEX='10\.0\.0\.([0-9]{1,3})'
+IPREGEX='10\.254\.0\.([0-9]{1,3})'
 
 echo() {
   if [[ $QUIET -eq 1 ]]; then
@@ -60,7 +60,7 @@ setup() {
   sudo cat /etc/wireguard/simplevpn.priv | wg pubkey | sudo tee /etc/wireguard/simplevpn.pub > /dev/null
 
   echo 'Generating simplevpn configuration file (/etc/wireguard/simplevpn.conf)'
-  printf '[Interface]\nAddress=10.0.0.1/24\nListenPort=%s\nPrivateKey=%s\n' "${PORT}" "$(sudo cat /etc/wireguard/simplevpn.priv)" | sudo tee /etc/wireguard/simplevpn.conf > /dev/null
+  printf '[Interface]\nAddress=10.254.0.1/24\nListenPort=%s\nPrivateKey=%s\n' "${PORT}" "$(sudo cat /etc/wireguard/simplevpn.priv)" | sudo tee /etc/wireguard/simplevpn.conf > /dev/null
 
   echo 'PostUp = iptables -A FORWARD -i simplevpn -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; ip6tables -A FORWARD -i simplevpn -j ACCEPT; ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE # Add forwarding when VPN is started' | sudo tee -a /etc/wireguard/simplevpn.conf > /dev/null
   echo 'PostDown = iptables -D FORWARD -i simplevpn -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; ip6tables -D FORWARD -i simplevpn -j ACCEPT; ip6tables -t nat -D POSTROUTING -o eth0 -j MASQUERADE # Remove forwarding when VPN is shutdown' | sudo tee -a /etc/wireguard/simplevpn.conf > /dev/null
@@ -82,11 +82,11 @@ newclient() {
   fi
 
   if [[ BASH_REMATCH[1] -gt 253 ]]; then
-    echo 'Too many clients! Maximum client IP is 10.0.0.254.';
+    echo 'Too many clients! Maximum client IP is 10.254.0.254.';
     exit 1;
   fi
 
-  NEXTIP="10.0.0.$((BASH_REMATCH[1] + 1))"
+  NEXTIP="10.254.0.$((BASH_REMATCH[1] + 1))"
 
   printf "\n# %s\n[Peer]\nPublicKey=%s\nAllowedIPs=%s/32\n" $NAME $PUB $NEXTIP | sudo tee -a /etc/wireguard/simplevpn.conf > /dev/null
 
@@ -94,7 +94,7 @@ newclient() {
 
   sudo touch $FILE
   printf "[Interface]\nAddress=%s\nDNS=1.1.1.1\nPrivateKey=%s\n\n" $NEXTIP $PRIV | sudo tee $FILE
-  printf "[Peer]\nPublicKey=%s\nEndpoint=%s:51820\nAllowedIPs=10.0.0.0/24\nPersistentKeepalive=10\n" "$(sudo cat /etc/wireguard/simplevpn.pub)" $HOSTNAME | sudo tee -a $FILE
+  printf "[Peer]\nPublicKey=%s\nEndpoint=%s:51820\nAllowedIPs=10.254.0.0/24\nPersistentKeepalive=10\n" "$(sudo cat /etc/wireguard/simplevpn.pub)" $HOSTNAME | sudo tee -a $FILE
 
   simplevpn restart
 

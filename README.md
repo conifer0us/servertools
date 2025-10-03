@@ -12,17 +12,10 @@ This documentation serves 3 purposes:
 
 This section is a short description of the externally facing services running on tialsinn. The server is running UFW and only has a few ports externally open, so they will be explained here:
 
-Ports 22 and 2222 are open for SSH traffic. The ssh server is fairly standard: only keys are allowed as authentication methods, and each user on the system can have a set of authorized keys
+Port 22 is open for SSH traffic. The ssh server is fairly standard: only keys are allowed as authentication methods, and each user on the system can have a set of authorized keys
 
-Ports 80 and 443 are open for web traffic through NGINX. It won't be very long until the Nginx configuration hell needs its own section, but for right now the server isn't doing too much.
-
-Ports 53 and 853 are open for DNS and DNSSEC traffic. Port 53 was running a DNS server that returned 0.0.0.0 for any reddit or youtube lookups, but the solution I had was slow. More to come there. 853 is still open and just uses nginx to proxy back to the server running on 53. This will work great when there is a server running on 53.
-
-Ports 6900:6999 are open for testing if I ever need that. There won't usually be anything coming out of there.
-
-Port 25 is open for mail, but I don't have a good enough understanding of SMTP to write much more thatn that. More there as well.
-
-Port 25565 is open for minecraft servers when those are running.
+Ports 80 and 443 are open for web traffic through NGINX (routed specifically to an emby server hosting media for only pre-registered users).
+The media server is lightweight, currently running emby and wireguard to connect out to this server.
 
 Port 51820 is open for wireguard traffic. Tialsinn is primarily a VPN, managed by the simplevpn script (documentation in the server scripts section).
 
@@ -32,7 +25,7 @@ This section contains documentation for scripts that have been written specifica
 
 ### serverhelp
 
-This is a script that gives server help! There are no arguments or options; serverhelp gives serverhelp. It just prints this file rn, but it will be smarter soon.
+This is a script that gives server help! There are no arguments or options; serverhelp gives serverhelp. It just prints this file.
 
 ### simplevpn
 
