@@ -47,7 +47,7 @@ All files produced by the program are put somewhere in /etc/wireguard.
 
 This configures the server to run wireguard. It installs all the required libraries, creates a public/private key pair, and creates a wireguard configuration file.
 
-The simplevpn network is configured for 10.0.0.0/24, but it is not started directly after configuration. simplevpn start must be run
+The simplevpn network is configured for 10.0.254.0/24, but it is not started directly after configuration. simplevpn start must be run
 
 Specifying a -p option changes the port. It is 51820 by default.
 
